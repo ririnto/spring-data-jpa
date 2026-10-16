@@ -48,6 +48,9 @@ public class PersistenceProviderUnitTests {
 	@Before
 	public void setup() {
 		this.shadowingClassLoader = new ShadowingClassLoader(getClass().getClassLoader());
+		// keep a single Mockito copy: shadowed org.mockito classes make CGLIB proxies
+		// implement a duplicate Factory interface and fail the cast at proxy creation
+		this.shadowingClassLoader.excludePackage("org.mockito.");
 	}
 
 	@Test // DATAJPA-444
@@ -125,13 +128,37 @@ public class PersistenceProviderUnitTests {
 
 	static class InterfaceGenerator implements Opcodes {
 
-		public static Class<?> generate(final String interfaceName, ClassLoader parentClassLoader,
+		public static Class<?> generate(final String interfaceName, final ClassLoader parentClassLoader,
 				final Class<?>... interfaces) throws ClassNotFoundException {
 
 			class CustomClassLoader extends ClassLoader {
 
 				public CustomClassLoader(ClassLoader parent) {
 					super(parent);
+				}
+
+				// ShadowingClassLoader only overrides the one-arg loadClass, so the standard
+				// two-arg delegation would bypass it and its enclosing test classpath, losing
+				// the JPA API classes during interface linking
+				@Override
+				protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+
+					Class<?> c = findLoadedClass(name);
+
+					if (c == null) {
+						try {
+							c = parentClassLoader.loadClass(name);
+						}
+						catch (ClassNotFoundException ex) {
+							c = findClass(name);
+						}
+					}
+
+					if (resolve) {
+						resolveClass(c);
+					}
+
+					return c;
 				}
 
 				@Override

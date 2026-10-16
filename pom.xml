@@ -559,6 +559,9 @@
 						</goals>
 						<phase>test</phase>
 						<configuration>
+						<!-- The provider agents look up JPA API classes at premain, which needs the
+							 test classpath on the system loader (the parent disables it) -->
+						<useSystemClassLoader>true</useSystemClassLoader>
 							<includes>
 								<include>**/EclipseLink*Tests.java</include>
 							</includes>
@@ -572,6 +575,9 @@
 						</goals>
 						<phase>test</phase>
 						<configuration>
+						<!-- The provider agents look up JPA API classes at premain, which needs the
+							 test classpath on the system loader (the parent disables it) -->
+						<useSystemClassLoader>true</useSystemClassLoader>
 							<skip>${skip-openjpa}</skip>
 							<includes>
 								<include>**/OpenJpa*Tests.java</include>
